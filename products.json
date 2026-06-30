@@ -1,0 +1,16 @@
+{
+  "categories": [
+    {
+      "name": "Смартфоны",
+      "description": "Категория смартфонов",
+      "products": [
+        {
+          "name": "Samsung Galaxy S23",
+          "description": "Флагманский смартфон",
+          "price": 79999.99,
+          "quantity": 15
+        }
+      ]
+    }
+  ]
+}
