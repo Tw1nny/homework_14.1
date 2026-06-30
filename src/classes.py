@@ -1,79 +1,88 @@
 """
-Модуль с классами Category и Product, а также функцией загрузки из JSON.
+Модуль с классами Product и Category, инкапсуляция, геттеры, сеттеры, класс-методы.
 """
 
 import json
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 
 class Product:
-    """Товар с названием, описанием, ценой и количеством."""
+    """Товар с приватной ценой."""
 
-    def __init__(self, name: str, description: str, price: float, quantity: int) -> None:
-        """
-        Инициализация продукта.
-
-        Параметры:
-            name: название товара
-            description: описание
-            price: цена (может быть с копейками)
-            quantity: количество в наличии (целое)
-        """
+    def __init__(
+        self, name: str, description: str, price: float, quantity: int
+    ) -> None:
         self.name = name
         self.description = description
-        self.price = price
+        self._price = price  # приватный атрибут
         self.quantity = quantity
+
+    @property
+    def price(self) -> float:
+        """Геттер для цены."""
+        return self._price
+
+    @price.setter
+    def price(self, new_price: float) -> None:
+        """Сеттер для цены с проверкой на положительность."""
+        if new_price <= 0:
+            print("Цена не должна быть нулевая или отрицательная")
+        else:
+            self._price = new_price
+
+    @classmethod
+    def new_product(cls, product_data: Dict[str, Any]) -> "Product":
+        """
+        Класс-метод для создания продукта из словаря.
+        (Базовый вариант, без проверки дубликатов).
+        """
+        return cls(
+            name=product_data.get("name", ""),
+            description=product_data.get("description", ""),
+            price=product_data.get("price", 0.0),
+            quantity=product_data.get("quantity", 0),
+        )
 
 
 class Category:
-    """
-    Категория товаров с названием, описанием и списком продуктов.
-    Автоматически ведёт подсчёт общего количества категорий и товаров.
-    """
+    """Категория с приватным списком продуктов."""
 
     category_count: int = 0
     product_count: int = 0
 
-    def __init__(self, name: str, description: str, products: List[Product]) -> None:
-        """
-        Инициализация категории.
-
-        Параметры:
-            name: название категории
-            description: описание
-            products: список объектов Product
-        """
+    def __init__(
+        self, name: str, description: str, products: List[Product] = None
+    ) -> None:
         self.name = name
         self.description = description
-        self.products = products
+        self._products = products if products is not None else []  # приватный список
 
-        # Автоматическое обновление счётчиков при создании объекта
         Category.category_count += 1
-        Category.product_count += len(products)
+        Category.product_count += len(self._products)
+
+    @property
+    def products(self) -> str:
+        """
+        Геттер для списка продуктов, возвращает строку по шаблону:
+        "Название продукта, X руб. Остаток: X шт.\n"
+        """
+        result = []
+        for prod in self._products:
+            result.append(
+                f"{prod.name}, {prod.price} руб. Остаток: {prod.quantity} шт."
+            )
+        return "\n".join(result)
+
+    def add_product(self, product: Product) -> None:
+        """Добавляет продукт в категорию и увеличивает счётчик продуктов."""
+        self._products.append(product)
+        Category.product_count += 1
 
 
+# ---------- Дополнительная функция загрузки из JSON (не обязательна, но полезна) ----------
 def load_categories_from_json(file_path: str) -> List[Category]:
     """
-    Загружает данные из JSON-файла и создаёт список объектов Category.
-
-    Ожидаемая структура JSON:
-    [
-        {
-            "name": "Категория 1",
-            "description": "Описание",
-            "products": [
-                {"name": "Товар", "description": "...", "price": 100.5, "quantity": 10},
-                ...
-            ]
-        },
-        ...
-    ]
-
-    Параметры:
-        file_path: путь к JSON-файлу.
-
-    Возвращает:
-        список объектов Category.
+    Загружает категории и продукты из JSON-файла.
     """
     try:
         with open(file_path, "r", encoding="utf-8") as f:
@@ -85,14 +94,7 @@ def load_categories_from_json(file_path: str) -> List[Category]:
     for cat_data in data:
         products = []
         for prod_data in cat_data.get("products", []):
-            products.append(
-                Product(
-                    name=prod_data.get("name", ""),
-                    description=prod_data.get("description", ""),
-                    price=prod_data.get("price", 0.0),
-                    quantity=prod_data.get("quantity", 0),
-                )
-            )
+            products.append(Product.new_product(prod_data))  # используем класс-метод
         categories.append(
             Category(
                 name=cat_data.get("name", ""),
