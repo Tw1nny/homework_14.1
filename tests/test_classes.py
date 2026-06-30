@@ -1,5 +1,5 @@
 import pytest
-from .classes import Product, Category, load_categories_from_json
+from src.classes import Product, Category, load_categories_from_json
 
 
 @pytest.fixture(autouse=True)
