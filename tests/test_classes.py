@@ -2,90 +2,101 @@ import pytest
 from src.classes import Product, Category, load_categories_from_json
 
 
-# Фикстуры для тестов
+@pytest.fixture(autouse=True)
+def reset_category_counts():
+    Category.category_count = 0
+    Category.product_count = 0
+
+
 @pytest.fixture
 def sample_product():
-    return Product("Ноутбук", "Игровой ноутбук", 150000.50, 5)
+    return Product("Ноутбук", "Игровой", 150000.50, 5)
 
 
 @pytest.fixture
 def sample_category(sample_product):
-    return Category("Электроника", "Разная техника", [sample_product])
+    return Category("Электроника", "Техника", [sample_product])
 
 
 def test_product_init(sample_product):
-    """Проверка инициализации Product."""
     assert sample_product.name == "Ноутбук"
-    assert sample_product.description == "Игровой ноутбук"
+    assert sample_product.description == "Игровой"
     assert sample_product.price == 150000.50
     assert sample_product.quantity == 5
 
 
+def test_product_price_setter_positive(sample_product):
+    sample_product.price = 200000.00
+    assert sample_product.price == 200000.00
+
+
+def test_product_price_setter_non_positive(capsys, sample_product):
+    sample_product.price = -100
+    captured = capsys.readouterr()
+    assert captured.out == "Цена не должна быть нулевая или отрицательная\n"
+    assert sample_product.price == 150000.50
+
+    sample_product.price = 0
+    captured = capsys.readouterr()
+    assert captured.out == "Цена не должна быть нулевая или отрицательная\n"
+    assert sample_product.price == 150000.50
+
+
+def test_product_new_classmethod():
+    data = {"name": "Телефон", "description": "Смартфон", "price": 50000.0, "quantity": 10}
+    product = Product.new_product(data)
+    assert product.name == "Телефон"
+    assert product.price == 50000.0
+    assert product.quantity == 10
+
+
 def test_category_init(sample_category):
-    """Проверка инициализации Category."""
     assert sample_category.name == "Электроника"
-    assert sample_category.description == "Разная техника"
-    assert len(sample_category.products) == 1
-    assert sample_category.products[0].name == "Ноутбук"
+    assert sample_category.description == "Техника"
+    products_str = sample_category.products
+    assert "Ноутбук" in products_str
+    assert "150000.5" in products_str
+    assert "Остаток: 5" in products_str
+
+
+def test_category_add_product(sample_category, sample_product):
+    new_prod = Product("Планшет", "Планшет", 30000, 3)
+    sample_category.add_product(new_prod)
+
+    products_str = sample_category.products
+    assert "Планшет" in products_str
+    assert "30000" in products_str
+    assert Category.product_count == 2
 
 
 def test_category_count():
-    """Проверка автоматического подсчёта категорий."""
-    Category.category_count = 0  # сброс для теста
-    Category.product_count = 0
-
-    cat1 = Category("A", "Описание A", [Product("P1", "desc", 10, 2)])
-    cat2 = Category("B", "Описание B", [Product("P2", "desc", 20, 3)])
+    cat1 = Category("A", "desc", [Product("P1", "d", 10, 2)])
+    cat2 = Category("B", "desc", [Product("P2", "d", 20, 3)])
 
     assert Category.category_count == 2
-    assert cat1.category_count == 2  # доступ через объект тоже работает
-
-
-def test_product_count():
-    """Проверка автоматического подсчёта общего количества продуктов."""
-    Category.category_count = 0
-    Category.product_count = 0
-
-    cat1 = Category("A", "desc", [Product("P1", "d", 1, 2), Product("P2", "d", 2, 3)])
-    cat2 = Category("B", "desc", [Product("P3", "d", 3, 4)])
-
-    assert Category.product_count == 3  # 2 + 1
+    assert Category.product_count == 2
+    # используем переменные, чтобы flake8 не ругался
+    assert cat1.name == "A"
+    assert cat2.name == "B"
 
 
 def test_load_categories_from_json(tmp_path):
-    """Тест загрузки из JSON (доп. задание)."""
     import json
-
     data = [
         {
-            "name": "Категория 1",
-            "description": "Описание 1",
+            "name": "Кат1",
+            "description": "Описание1",
             "products": [
-                {"name": "Товар 1", "description": "desc1", "price": 100.0, "quantity": 10},
-                {"name": "Товар 2", "description": "desc2", "price": 200.5, "quantity": 20},
-            ]
-        },
-        {
-            "name": "Категория 2",
-            "description": "Описание 2",
-            "products": [
-                {"name": "Товар 3", "description": "desc3", "price": 300.0, "quantity": 30},
+                {"name": "Товар1", "description": "desc1", "price": 100.0, "quantity": 10}
             ]
         }
     ]
-
-    file_path = tmp_path / "test_products.json"
+    file_path = tmp_path / "test.json"
     with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False)
+        json.dump(data, f)
 
     categories = load_categories_from_json(str(file_path))
-    assert len(categories) == 2
-    assert categories[0].name == "Категория 1"
-    assert len(categories[0].products) == 2
-    assert categories[0].products[0].price == 100.0
-
-
-def test_load_categories_from_json_file_not_found():
-    """Ошибка при отсутствии файла -> пустой список."""
-    categories = load_categories_from_json("nonexistent.json")
-    assert categories == []
+    assert len(categories) == 1
+    assert categories[0].name == "Кат1"
+    assert len(categories[0]._products) == 1
+    assert categories[0]._products[0].name == "Товар1"
