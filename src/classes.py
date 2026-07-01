@@ -69,9 +69,9 @@ class Category:
         result = []
         for prod in self._products:
             result.append(
-                f"{prod.name}, {prod.price} руб. Остаток: {prod.quantity} шт."
+                f"{prod.name}, {prod.price} руб. Остаток: {prod.quantity} шт.\n"
             )
-        return "\n".join(result)
+        return "".join(result)
 
     def add_product(self, product: Product) -> None:
         """Добавляет продукт в категорию и увеличивает счётчик продуктов."""
