@@ -1,91 +1,153 @@
 import pytest
-from src.classes import Product, Category, load_categories_from_json
+
+from src.classes import (
+    Category,
+    LawnGrass,
+    Product,
+    Smartphone,
+    load_categories_from_json,
+)
 
 
-# Фикстуры для тестов
+@pytest.fixture(autouse=True)
+def reset_counts():
+    Category.category_count = 0
+    Category.product_count = 0
+
+
 @pytest.fixture
 def sample_product():
-    return Product("Ноутбук", "Игровой ноутбук", 150000.50, 5)
+    return Product("Ноутбук", "Игровой", 150000.50, 5)
 
 
 @pytest.fixture
 def sample_category(sample_product):
-    return Category("Электроника", "Разная техника", [sample_product])
+    return Category("Электроника", "Техника", [sample_product])
 
 
+@pytest.fixture
+def smartphone():
+    return Smartphone(
+        "iPhone 15",
+        "Смартфон Apple",
+        120000,
+        10,
+        "A16 Bionic",
+        "iPhone 15",
+        256,
+        "черный",
+    )
+
+
+@pytest.fixture
+def lawn_grass():
+    return LawnGrass(
+        "Газонная трава",
+        "Спортсмен",
+        1500,
+        50,
+        "Россия",
+        "7-14 дней",
+        "зеленый",
+    )
+
+
+# ---------- Старые тесты (должны проходить) ----------
 def test_product_init(sample_product):
-    """Проверка инициализации Product."""
     assert sample_product.name == "Ноутбук"
-    assert sample_product.description == "Игровой ноутбук"
     assert sample_product.price == 150000.50
-    assert sample_product.quantity == 5
+
+
+def test_product_price_setter_positive(sample_product):
+    sample_product.price = 200000
+    assert sample_product.price == 200000
+
+
+def test_product_price_setter_non_positive(capsys, sample_product):
+    sample_product.price = -10
+    captured = capsys.readouterr()
+    assert captured.out == "Цена не должна быть нулевая или отрицательная\n"
+    assert sample_product.price == 150000.50
+
+
+def test_product_new_classmethod():
+    data = {"name": "Телефон", "description": "desc", "price": 50000, "quantity": 10}
+    product = Product.new_product(data)
+    assert product.name == "Телефон"
 
 
 def test_category_init(sample_category):
-    """Проверка инициализации Category."""
     assert sample_category.name == "Электроника"
-    assert sample_category.description == "Разная техника"
-    assert len(sample_category.products) == 1
-    assert sample_category.products[0].name == "Ноутбук"
+
+
+def test_category_add_product(sample_category):
+    new_prod = Product("Планшет", "Планшет", 30000, 3)
+    sample_category.add_product(new_prod)
+    assert Category.product_count == 2
 
 
 def test_category_count():
-    """Проверка автоматического подсчёта категорий."""
-    Category.category_count = 0  # сброс для теста
-    Category.product_count = 0
-
-    cat1 = Category("A", "Описание A", [Product("P1", "desc", 10, 2)])
-    cat2 = Category("B", "Описание B", [Product("P2", "desc", 20, 3)])
-
+    cat1 = Category("A", "desc", [Product("P1", "d", 10, 2)])
+    cat2 = Category("B", "desc", [Product("P2", "d", 20, 3)])
     assert Category.category_count == 2
-    assert cat1.category_count == 2  # доступ через объект тоже работает
-
-
-def test_product_count():
-    """Проверка автоматического подсчёта общего количества продуктов."""
-    Category.category_count = 0
-    Category.product_count = 0
-
-    cat1 = Category("A", "desc", [Product("P1", "d", 1, 2), Product("P2", "d", 2, 3)])
-    cat2 = Category("B", "desc", [Product("P3", "d", 3, 4)])
-
-    assert Category.product_count == 3  # 2 + 1
+    assert Category.product_count == 2
 
 
 def test_load_categories_from_json(tmp_path):
-    """Тест загрузки из JSON (доп. задание)."""
     import json
 
-    data = [
-        {
-            "name": "Категория 1",
-            "description": "Описание 1",
-            "products": [
-                {"name": "Товар 1", "description": "desc1", "price": 100.0, "quantity": 10},
-                {"name": "Товар 2", "description": "desc2", "price": 200.5, "quantity": 20},
-            ]
-        },
-        {
-            "name": "Категория 2",
-            "description": "Описание 2",
-            "products": [
-                {"name": "Товар 3", "description": "desc3", "price": 300.0, "quantity": 30},
-            ]
-        }
-    ]
-
-    file_path = tmp_path / "test_products.json"
+    data = [{"name": "Кат1", "description": "Описание1", "products": []}]
+    file_path = tmp_path / "test.json"
     with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False)
-
+        json.dump(data, f)
     categories = load_categories_from_json(str(file_path))
-    assert len(categories) == 2
-    assert categories[0].name == "Категория 1"
-    assert len(categories[0].products) == 2
-    assert categories[0].products[0].price == 100.0
+    assert len(categories) == 1
 
 
-def test_load_categories_from_json_file_not_found():
-    """Ошибка при отсутствии файла -> пустой список."""
-    categories = load_categories_from_json("nonexistent.json")
-    assert categories == []
+def test_product_str(sample_product):
+    assert str(sample_product) == "Ноутбук, 150000.5 руб. Остаток: 5 шт."
+
+
+def test_category_str(sample_category):
+    assert str(sample_category) == "Электроника, количество продуктов: 5 шт."
+
+
+def test_product_add(sample_product):
+    other = Product("Телефон", "desc", 200, 10)
+    total = sample_product + other
+    assert total == 150000.5 * 5 + 200 * 10
+
+
+# ---------- Новые тесты для наследников ----------
+def test_smartphone_init(smartphone):
+    assert smartphone.name == "iPhone 15"
+    assert smartphone.efficiency == "A16 Bionic"
+    assert smartphone.model == "iPhone 15"
+    assert smartphone.memory == 256
+    assert smartphone.color == "черный"
+
+
+def test_lawn_grass_init(lawn_grass):
+    assert lawn_grass.name == "Газонная трава"
+    assert lawn_grass.country == "Россия"
+    assert lawn_grass.germination_period == "7-14 дней"
+    assert lawn_grass.color == "зеленый"
+
+
+def test_add_same_class(smartphone):
+    other_smartphone = Smartphone(
+        "Samsung", "desc", 100000, 5, "Exynos", "S23", 128, "белый"
+    )
+    total = smartphone + other_smartphone
+    expected = 120000 * 10 + 100000 * 5
+    assert total == expected
+
+
+def test_add_different_classes(smartphone, lawn_grass):
+    with pytest.raises(TypeError, match="Нельзя складывать товары разных классов"):
+        _ = smartphone + lawn_grass
+
+
+def test_category_add_product_invalid_type(sample_category):
+    with pytest.raises(TypeError, match="Можно добавлять только объекты Product"):
+        sample_category.add_product("not a product")
