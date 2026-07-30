@@ -1,17 +1,48 @@
 """
-Модуль с классами Product, Category, Smartphone, LawnGrass.
+Модуль с классами Product, Category, Smartphone, LawnGrass,
+абстрактным базовым классом BaseProduct и миксином LogMixin.
 """
 
 import json
+from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 
 
-class Product:
-    """Базовый класс для всех товаров."""
+class LogMixin:
+    """Миксин для логирования создания объектов."""
+
+    def __init__(self, *args, **kwargs) -> None:
+        """Выводит информацию о создании объекта с переданными аргументами."""
+        print(
+            f"Создан объект {self.__class__.__name__} с параметрами: {args}, {kwargs}"
+        )
+        # Вызываем родительский __init__ без аргументов, чтобы не сломать object.__init__
+        super().__init__()
+
+
+class BaseProduct(ABC):
+    """Абстрактный базовый класс для всех продуктов."""
+
+    @property
+    @abstractmethod
+    def price(self) -> float:
+        """Геттер для цены."""
+        pass
+
+    @abstractmethod
+    def __str__(self) -> str:
+        """Строковое представление продукта."""
+        pass
+
+
+class Product(LogMixin, BaseProduct):
+    """Базовый класс для всех товаров (реализует абстрактные методы)."""
 
     def __init__(
         self, name: str, description: str, price: float, quantity: int
     ) -> None:
+        # Передаём аргументы в миксин для логирования
+        super().__init__(name, description, price, quantity)
         self.name = name
         self.description = description
         self.__price = price
@@ -41,7 +72,6 @@ class Product:
         return f"{self.name}, {self.price} руб. Остаток: {self.quantity} шт."
 
     def __add__(self, other: "Product") -> float:
-        """Сложение двух продуктов: проверяет, что оба одного класса."""
         if type(self) is not type(other):
             raise TypeError("Нельзя складывать товары разных классов")
         return (self.price * self.quantity) + (other.price * other.quantity)
@@ -108,7 +138,6 @@ class Category:
         return "".join(str(prod) + "\n" for prod in self._products)
 
     def add_product(self, product: Product) -> None:
-        """Добавляет продукт, только если это объект Product или его наследник."""
         if not isinstance(product, Product):
             raise TypeError(
                 "Можно добавлять только объекты Product или его наследников"
@@ -122,7 +151,9 @@ class Category:
 
 
 def load_categories_from_json(file_path: str) -> List[Category]:
-    """Загружает категории и продукты из JSON-файла."""
+    """
+    Загружает категории и продукты из JSON-файла.
+    """
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             data: List[Dict[str, Any]] = json.load(f)
@@ -133,7 +164,6 @@ def load_categories_from_json(file_path: str) -> List[Category]:
     for cat_data in data:
         products = []
         for prod_data in cat_data.get("products", []):
-            # Здесь можно определить, какой класс создавать, но по умолчанию Product
             products.append(Product.new_product(prod_data))
         categories.append(
             Category(
