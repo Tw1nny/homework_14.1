@@ -1,5 +1,6 @@
 import pytest
-from src.classes import Product, Category, load_categories_from_json
+
+from src.classes import Category, Product, load_categories_from_json
 
 
 @pytest.fixture(autouse=True)
@@ -43,7 +44,12 @@ def test_product_price_setter_non_positive(capsys, sample_product):
 
 
 def test_product_new_classmethod():
-    data = {"name": "Телефон", "description": "Смартфон", "price": 50000.0, "quantity": 10}
+    data = {
+        "name": "Телефон",
+        "description": "Смартфон",
+        "price": 50000.0,
+        "quantity": 10,
+    }
     product = Product.new_product(data)
     assert product.name == "Телефон"
     assert product.price == 50000.0
@@ -75,20 +81,25 @@ def test_category_count():
 
     assert Category.category_count == 2
     assert Category.product_count == 2
-    # используем переменные, чтобы flake8 не ругался
     assert cat1.name == "A"
     assert cat2.name == "B"
 
 
 def test_load_categories_from_json(tmp_path):
     import json
+
     data = [
         {
             "name": "Кат1",
             "description": "Описание1",
             "products": [
-                {"name": "Товар1", "description": "desc1", "price": 100.0, "quantity": 10}
-            ]
+                {
+                    "name": "Товар1",
+                    "description": "desc1",
+                    "price": 100.0,
+                    "quantity": 10,
+                }
+            ],
         }
     ]
     file_path = tmp_path / "test.json"
@@ -100,3 +111,28 @@ def test_load_categories_from_json(tmp_path):
     assert categories[0].name == "Кат1"
     assert len(categories[0]._products) == 1
     assert categories[0]._products[0].name == "Товар1"
+
+
+# ---------- Новые тесты для магических методов ----------
+def test_product_str(sample_product):
+    expected = "Ноутбук, 150000.5 руб. Остаток: 5 шт."
+    assert str(sample_product) == expected
+
+
+def test_category_str(sample_category):
+    # В категории один продукт с quantity=5
+    expected = "Электроника, количество продуктов: 5 шт."
+    assert str(sample_category) == expected
+
+    # Добавим ещё продукт и проверим сумму quantity
+    new_prod = Product("Планшет", "Планшет", 30000, 3)
+    sample_category.add_product(new_prod)
+    expected2 = "Электроника, количество продуктов: 8 шт."
+    assert str(sample_category) == expected2
+
+
+def test_product_add(sample_product):
+    other = Product("Телефон", "desc", 200, 10)
+    total = sample_product + other
+    # 150000.5 * 5 + 200 * 10 = 750002.5 + 2000 = 752002.5
+    assert total == 150000.5 * 5 + 200 * 10
