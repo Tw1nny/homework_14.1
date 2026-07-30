@@ -339,3 +339,41 @@ def test_log_mixin_for_lawn_grass(capsys):
     assert (
         "Создан объект LawnGrass с параметрами: ('A', 'B', 100, 2), {}" in captured.out
     )
+
+
+def test_product_init_zero_quantity_raises():
+    with pytest.raises(
+        ValueError, match="Товар с нулевым количеством не может быть добавлен"
+    ):
+        Product("Товар", "Описание", 100, 0)
+
+
+def test_category_average_price_with_products(category_with_product):
+    # category_with_product уже содержит один продукт с ценой 150000.5
+    assert category_with_product.average_price() == 150000.5
+
+
+def test_category_average_price_empty_category():
+    empty_cat = Category("Пустая", "desc", [])
+    assert empty_cat.average_price() == 0.0
+
+
+def test_category_average_price_multiple_products():
+    p1 = Product("P1", "d", 100, 10)
+    p2 = Product("P2", "d", 200, 20)
+    cat = Category("Cat", "desc", [p1, p2])
+    assert cat.average_price() == (100 + 200) / 2
+
+
+def test_smartphone_init_zero_quantity_raises():
+    with pytest.raises(
+        ValueError, match="Товар с нулевым количеством не может быть добавлен"
+    ):
+        Smartphone("A", "B", 100, 0, "C", "D", 128, "red")
+
+
+def test_lawn_grass_init_zero_quantity_raises():
+    with pytest.raises(
+        ValueError, match="Товар с нулевым количеством не может быть добавлен"
+    ):
+        LawnGrass("A", "B", 100, 0, "RU", "7d", "green")

@@ -12,11 +12,9 @@ class LogMixin:
     """Миксин для логирования создания объектов."""
 
     def __init__(self, *args, **kwargs) -> None:
-        """Выводит информацию о создании объекта с переданными аргументами."""
         print(
             f"Создан объект {self.__class__.__name__} с параметрами: {args}, {kwargs}"
         )
-        # Вызываем родительский __init__ без аргументов, чтобы не сломать object.__init__
         super().__init__()
 
 
@@ -26,22 +24,22 @@ class BaseProduct(ABC):
     @property
     @abstractmethod
     def price(self) -> float:
-        """Геттер для цены."""
         pass
 
     @abstractmethod
     def __str__(self) -> str:
-        """Строковое представление продукта."""
         pass
 
 
 class Product(LogMixin, BaseProduct):
-    """Базовый класс для всех товаров (реализует абстрактные методы)."""
+    """Базовый класс для всех товаров."""
 
     def __init__(
         self, name: str, description: str, price: float, quantity: int
     ) -> None:
-        # Передаём аргументы в миксин для логирования
+        # Проверка на нулевое количество
+        if quantity == 0:
+            raise ValueError("Товар с нулевым количеством не может быть добавлен")
         super().__init__(name, description, price, quantity)
         self.name = name
         self.description = description
@@ -78,8 +76,6 @@ class Product(LogMixin, BaseProduct):
 
 
 class Smartphone(Product):
-    """Смартфон с дополнительными характеристиками."""
-
     def __init__(
         self,
         name: str,
@@ -99,8 +95,6 @@ class Smartphone(Product):
 
 
 class LawnGrass(Product):
-    """Газонная трава с дополнительными характеристиками."""
-
     def __init__(
         self,
         name: str,
@@ -145,15 +139,22 @@ class Category:
         self._products.append(product)
         Category.product_count += 1
 
+    def average_price(self) -> float:
+        """
+        Возвращает среднюю цену всех товаров в категории.
+        Если товаров нет, возвращает 0.
+        """
+        if not self._products:
+            return 0.0
+        total_price = sum(prod.price for prod in self._products)
+        return total_price / len(self._products)
+
     def __str__(self) -> str:
         total_quantity = sum(prod.quantity for prod in self._products)
         return f"{self.name}, количество продуктов: {total_quantity} шт."
 
 
 def load_categories_from_json(file_path: str) -> List[Category]:
-    """
-    Загружает категории и продукты из JSON-файла.
-    """
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             data: List[Dict[str, Any]] = json.load(f)
