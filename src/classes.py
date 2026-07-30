@@ -1,6 +1,5 @@
 """
-Модуль с классами Product и Category, инкапсуляция, геттеры, сеттеры, класс-методы,
-магические методы __str__ и __add__.
+Модуль с классами Product, Category, Smartphone, LawnGrass.
 """
 
 import json
@@ -8,7 +7,7 @@ from typing import Any, Dict, List
 
 
 class Product:
-    """Товар с приватной ценой."""
+    """Базовый класс для всех товаров."""
 
     def __init__(
         self, name: str, description: str, price: float, quantity: int
@@ -39,17 +38,53 @@ class Product:
         )
 
     def __str__(self) -> str:
-        """Строковое представление продукта."""
         return f"{self.name}, {self.price} руб. Остаток: {self.quantity} шт."
 
     def __add__(self, other: "Product") -> float:
-        """
-        Сложение двух продуктов: сумма произведений цены на количество.
-        Возвращает общую стоимость товаров на складе.
-        """
-        if not isinstance(other, Product):
-            raise TypeError("Можно складывать только объекты Product")
+        """Сложение двух продуктов: проверяет, что оба одного класса."""
+        if type(self) is not type(other):
+            raise TypeError("Нельзя складывать товары разных классов")
         return (self.price * self.quantity) + (other.price * other.quantity)
+
+
+class Smartphone(Product):
+    """Смартфон с дополнительными характеристиками."""
+
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        price: float,
+        quantity: int,
+        efficiency: str,
+        model: str,
+        memory: int,
+        color: str,
+    ) -> None:
+        super().__init__(name, description, price, quantity)
+        self.efficiency = efficiency
+        self.model = model
+        self.memory = memory
+        self.color = color
+
+
+class LawnGrass(Product):
+    """Газонная трава с дополнительными характеристиками."""
+
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        price: float,
+        quantity: int,
+        country: str,
+        germination_period: str,
+        color: str,
+    ) -> None:
+        super().__init__(name, description, price, quantity)
+        self.country = country
+        self.germination_period = germination_period
+        self.color = color
 
 
 class Category:
@@ -70,19 +105,18 @@ class Category:
 
     @property
     def products(self) -> str:
-        """
-        Геттер для списка продуктов, возвращает строку по шаблону:
-        "Название продукта, X руб. Остаток: X шт.\n"
-        Использует __str__ каждого продукта.
-        """
         return "".join(str(prod) + "\n" for prod in self._products)
 
     def add_product(self, product: Product) -> None:
+        """Добавляет продукт, только если это объект Product или его наследник."""
+        if not isinstance(product, Product):
+            raise TypeError(
+                "Можно добавлять только объекты Product или его наследников"
+            )
         self._products.append(product)
         Category.product_count += 1
 
     def __str__(self) -> str:
-        """Строковое представление категории с общим количеством товаров на складе."""
         total_quantity = sum(prod.quantity for prod in self._products)
         return f"{self.name}, количество продуктов: {total_quantity} шт."
 
@@ -99,6 +133,7 @@ def load_categories_from_json(file_path: str) -> List[Category]:
     for cat_data in data:
         products = []
         for prod_data in cat_data.get("products", []):
+            # Здесь можно определить, какой класс создавать, но по умолчанию Product
             products.append(Product.new_product(prod_data))
         categories.append(
             Category(
